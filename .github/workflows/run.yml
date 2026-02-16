@@ -1,4 +1,4 @@
-name: YouTube Automation
+name: YouTube Automation - Images & Songs Together
 
 on:
   workflow_dispatch:
@@ -14,25 +14,29 @@ jobs:
       - name: Set timezone to Stockholm
         run: tzutil /s "W. Europe Standard Time"
 
-      - name: Check for images
+      - name: Check both folders and run batch
         shell: powershell
         run: |
-          $folder = "${{ github.workspace }}\moneyvidz"
-          $files = Get-ChildItem -Path $folder -Include *.jpg,*.png,*.jpeg -File
-          if ($files.Count -eq 0) {
-            Write-Output "No images left in moneyvidz. Exiting."
-            exit 0
-          } else {
-            Write-Output "$($files.Count) images found. Continuing..."
+          $imageFolder = "${{ github.workspace }}\moneyvidz"
+          $songFolder  = "${{ github.workspace }}\pixabaysongs1"
+
+          $images = Get-ChildItem -Path $imageFolder -Include *.jpg,*.png,*.jpeg -File
+          $songs  = Get-ChildItem -Path $songFolder -Include *.mp3,*.wav,*.aac -File
+
+          if ($images.Count -eq 0 -or $songs.Count -eq 0) {
+              Write-Output "Either moneyvidz or pixabaysongs1 is empty. Skipping batch."
+              exit 0
           }
 
-      - name: Run batch file
-        run: .\skkk.bat
+          Write-Output "Both folders have files. Running skkk.bat..."
+          & "${{ github.workspace }}\skkk.bat"
 
-      - name: Move processed images to done
-        shell: powershell
-        run: |
-          $src = "${{ github.workspace }}\moneyvidz\*"
-          $dest = "${{ github.workspace }}\moneyvidz\done"
-          if (-not (Test-Path $dest)) { New-Item -ItemType Directory -Path $dest }
-          Move-Item -Path $src -Destination $dest
+          # Move processed images
+          $destImages = "$imageFolder\done"
+          if (-not (Test-Path $destImages)) { New-Item -ItemType Directory -Path $destImages }
+          Move-Item -Path "$imageFolder\*" -Destination $destImages
+
+          # Move processed songs
+          $destSongs = "$songFolder\done"
+          if (-not (Test-Path $destSongs)) { New-Item -ItemType Directory -Path $destSongs }
+          Move-Item -Path "$songFolder\*" -Destination $destSongs
