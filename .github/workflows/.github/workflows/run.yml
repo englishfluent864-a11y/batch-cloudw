@@ -1,10 +1,9 @@
-.github/workflows/run.yml
 name: YouTube Automation
 
 on:
   workflow_dispatch:
   schedule:
-    - cron: "0 12 * * *"
+    - cron: "35 23 * * *"  # 12:35 AM Sweden time (UTC+1/UTC+2)
 
 jobs:
   run-batch:
@@ -12,5 +11,29 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Set timezone to Stockholm
+        run: tzutil /s "W. Europe Standard Time"
+
+      - name: Check for images
+        shell: powershell
+        run: |
+          $folder = "${{ github.workspace }}\moneyvidz"
+          $files = Get-ChildItem -Path $folder -Include *.jpg,*.png,*.jpeg -File
+          if ($files.Count -eq 0) {
+            Write-Output "No images left in moneyvidz. Exiting."
+            exit 0
+          } else {
+            Write-Output "$($files.Count) images found. Continuing..."
+          }
+
       - name: Run batch file
-        run: skkk.bat
+        run: .\skkk.bat
+
+      - name: Move processed images to done
+        shell: powershell
+        run: |
+          $src = "${{ github.workspace }}\moneyvidz\*"
+          $dest = "${{ github.workspace }}\moneyvidz\done"
+          if (-not (Test-Path $dest)) { New-Item -ItemType Directory -Path $dest }
+          Move-Item -Path $src -Destination $dest
+
